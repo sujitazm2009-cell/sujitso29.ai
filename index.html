@@ -1,0 +1,467 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS - AI Voice Assistant</title>
+
+<style>
+:root {
+  --bg: #07111f;
+  --panel: #101e31;
+  --blue: #00c8ff;
+  --text: #edf7ff;
+  --muted: #9cb3ca;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: radial-gradient(circle at top, #122c4a, var(--bg) 65%);
+  color: var(--text);
+  min-height: 100vh;
+}
+header {
+  text-align: center;
+  padding: 26px 15px 12px;
+}
+header h1 {
+  margin: 0;
+  color: var(--blue);
+  letter-spacing: 5px;
+  font-size: clamp(30px, 6vw, 48px);
+  text-shadow: 0 0 20px #00c8ff66;
+}
+header p { color: var(--muted); }
+.container { width: min(950px, 94%); margin: auto; }
+.panel {
+  background: #101e31eF;
+  border: 1px solid #26435e;
+  border-radius: 20px;
+  padding: 22px;
+  margin: 16px 0;
+  box-shadow: 0 10px 35px #0004;
+}
+.status { color: #57e6a5; font-size: 14px; }
+.mic-area { text-align: center; padding: 15px 0; }
+#mic {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 2px solid var(--blue);
+  color: var(--blue);
+  background: #06223b;
+  font-size: 45px;
+  cursor: pointer;
+  box-shadow: 0 0 28px #00c8ff40;
+  transition: .2s;
+}
+#mic.listening {
+  background: #073f58;
+  box-shadow: 0 0 35px #00c8ffbb;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  50% { transform: scale(1.06); }
+}
+#message { color: var(--muted); min-height: 24px; }
+button, input, textarea, select { font: inherit; }
+button {
+  cursor: pointer;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 12px;
+}
+.action {
+  background: #142943;
+  border: 1px solid #2a4968;
+  border-radius: 13px;
+  color: var(--text);
+  padding: 17px 10px;
+}
+.action:hover {
+  border-color: var(--blue);
+  background: #193954;
+}
+.action span { display: block; font-size: 25px; margin-bottom: 7px; }
+h2 { font-size: 19px; }
+#chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 270px;
+  overflow-y: auto;
+}
+.bubble {
+  padding: 11px 14px;
+  border-radius: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.user { background: #153a59; align-self: flex-end; }
+.jarvis { background: #1b2b40; align-self: flex-start; }
+.row { display: flex; gap: 8px; margin-top: 12px; }
+input, textarea, select {
+  min-width: 0;
+  background: #081626;
+  color: white;
+  border: 1px solid #35516d;
+  border-radius: 9px;
+  padding: 11px;
+}
+input { flex: 1; }
+.primary {
+  background: var(--blue);
+  color: #001321;
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 16px;
+  font-weight: bold;
+}
+#notes { width: 100%; min-height: 130px; resize: vertical; }
+.hint { color: var(--muted); font-size: 13px; line-height: 1.7; }
+footer { text-align: center; color: var(--muted); padding: 15px; }
+</style>
+</head>
+
+<body>
+<header>
+  <h1>JARVIS</h1>
+  <p>Your Personal Voice Assistant</p>
+  <div class="status" id="status">● Ready</div>
+</header>
+
+<main class="container">
+  <section class="panel">
+    <div class="mic-area">
+      <button id="mic" aria-label="Start voice assistant">🎙</button>
+      <h2 id="headline">Hello! Main JARVIS hoon.</h2>
+      <p id="message">Mic button dabao aur apni command bolo.</p>
+      <label for="language">Voice recognition language: </label>
+      <select id="language">
+        <option value="hi-IN">Hindi</option>
+        <option value="en-IN">English (India)</option>
+        <option value="en-US">English (US)</option>
+      </select>
+    </div>
+    <div class="grid">
+      <button class="action" data-action="google"><span>🔎</span>Google</button>
+      <button class="action" data-action="youtube"><span>▶️</span>YouTube</button>
+      <button class="action" data-action="notes"><span>📝</span>Notepad Alternative</button>
+      <button class="action" data-action="calculator"><span>🧮</span>Calculator</button>
+      <button class="action" data-action="gmail"><span>✉️</span>Gmail</button>
+      <button class="action" data-action="maps"><span>🌍</span>Maps</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>💬 JARVIS Conversation</h2>
+    <div id="chat" aria-live="polite">
+      <div class="bubble jarvis">JARVIS: Namaste! Bolo, main tumhari kya madad karun?</div>
+    </div>
+    <form id="commandForm" class="row">
+      <input id="commandInput" placeholder="Yahan command type karo..." autocomplete="off">
+      <button class="primary" type="submit">Send</button>
+    </form>
+    <p class="hint">Example: YouTube kholo, time batao, Google par search karo space science.</p>
+  </section>
+
+  <section class="panel" id="notesPanel" hidden>
+    <h2>📝 Quick Notes</h2>
+    <textarea id="notes" placeholder="Yahan apne notes likho..."></textarea>
+    <div class="row">
+      <button class="primary" id="downloadNotes">Download Notes</button>
+      <button class="action" id="closeNotes">Close</button>
+    </div>
+    <p class="hint">Notes download karne par text file milegi. Ye editor Windows Notepad ke badle hai.</p>
+  </section>
+
+  <section class="panel">
+    <h2>🛡️ Commands</h2>
+    <p class="hint">
+      • Open Google / Google kholo<br>
+      • Open YouTube / YouTube kholo<br>
+      • Open Gmail / Gmail kholo<br>
+      • Open Calculator / Calculator kholo<br>
+      • Open Notepad / Notes kholo<br>
+      • What is the time? / Samay batao<br>
+      • What is the date? / Aaj ki date batao<br>
+      • Search for space science<br>
+      • Hello / Tum kaise ho?<br>
+      • Stop listening / Sunna band karo
+    </p>
+  </section>
+</main>
+<footer>JARVIS Browser Edition • HTML + CSS + JavaScript • No Python</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const statusEl = $("status");
+const mic = $("mic");
+const message = $("message");
+const chat = $("chat");
+const notesPanel = $("notesPanel");
+
+let recognition = null;
+let listening = false;
+let speakAfterCommand = true;
+
+function addMessage(text, who = "jarvis") {
+  const bubble = document.createElement("div");
+  bubble.className = "bubble " + who;
+  bubble.textContent = (who === "user" ? "You: " : "JARVIS: ") + text;
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function speak(text) {
+  if (!("speechSynthesis" in window)) {
+    message.textContent = "Is browser mein speech output available nahi hai.";
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = $("language").value;
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
+function reply(text, voice = true) {
+  addMessage(text);
+  message.textContent = text;
+  if (voice) speak(text);
+}
+
+function openSite(url) {
+  // Browser popup blocker kabhi-kabhi new tabs ko rok sakta hai.
+  const tab = window.open(url, "_blank", "noopener,noreferrer");
+  if (!tab) {
+    reply("Browser ne naya tab block kiya ho sakta hai. Neeche diye gaye link par click karke kholo.", false);
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Website kholne ke liye yahan click karo";
+    link.style.display = "block";
+    link.style.color = "#00c8ff";
+    chat.appendChild(link);
+  }
+}
+
+function showNotes() {
+  notesPanel.hidden = false;
+  $("notes").focus();
+  reply("Notes editor khol diya hai.");
+}
+
+function runCommand(raw) {
+  const original = raw.trim();
+  if (!original) return;
+  addMessage(original, "user");
+
+  const t = original.toLowerCase()
+    .replace(/[?!.,]/g, "")
+    .replace(/\b(jarvis|please|hey)\b/g, "")
+    .trim();
+
+  if (/^(stop listening|stop|exit|quit|sunna band karo|band ho jao)$/.test(t)) {
+    stopListening();
+    reply("Theek hai, main ab sunna band kar raha hoon.");
+    return;
+  }
+
+  if (/\b(time|samay|kitne baje)\b/.test(t)) {
+    reply("Abhi " + new Date().toLocaleTimeString([], {
+      hour: "2-digit", minute: "2-digit"
+    }) + " baj rahe hain.");
+    return;
+  }
+
+  if (/\b(date|tarikh|aaj ki date)\b/.test(t)) {
+    reply("Aaj " + new Date().toLocaleDateString("hi-IN", {
+      day: "numeric", month: "long", year: "numeric"
+    }) + " hai.");
+    return;
+  }
+
+  if (/\b(hello|hi|namaste|kaise ho|how are you)\b/.test(t)) {
+    reply("Namaste! Main badhiya hoon. Batao, main kya karun?");
+    return;
+  }
+
+  if (/\b(notes|notepad|likhne ke liye)\b/.test(t)) {
+    showNotes();
+    return;
+  }
+
+  if (/\b(calculator|calculate|hisab)\b/.test(t)) {
+    openSite("https://www.google.com/search?q=calculator");
+    reply("Browser mein calculator kholne ki koshish kar raha hoon.");
+    return;
+  }
+
+  if (/\b(youtube|you tube)\b/.test(t)) {
+    openSite("https://www.youtube.com");
+    reply("YouTube kholne ki koshish kar raha hoon.");
+    return;
+  }
+
+  if (/\b(gmail|email)\b/.test(t)) {
+    openSite("https://mail.google.com");
+    reply("Gmail kholne ki koshish kar raha hoon.");
+    return;
+  }
+
+  if (/\b(maps|map|location)\b/.test(t)) {
+    openSite("https://maps.google.com");
+    reply("Google Maps kholne ki koshish kar raha hoon.");
+    return;
+  }
+
+  if (/\b(google|browser|website|internet)\b/.test(t) &&
+      !/\b(search|find|dhundo|dhoondo|khojo)\b/.test(t)) {
+    openSite("https://www.google.com");
+    reply("Google kholne ki koshish kar raha hoon.");
+    return;
+  }
+
+  const searchMatch = original.match(
+    /(?:search(?:\s+for)?|google par search karo|google par|dhundo|dhoondo|khojo)\s+(.+)/i
+  );
+  if (searchMatch && searchMatch[1]) {
+    const query = searchMatch[1].trim();
+    openSite("https://www.google.com/search?q=" + encodeURIComponent(query));
+    reply(query + " ke liye Google search khol raha hoon.");
+    return;
+  }
+
+  if (/\b(weather|mausam)\b/.test(t)) {
+    openSite("https://www.google.com/search?q=" + encodeURIComponent(original));
+    reply("Mausam ki jaankari search kar raha hoon.");
+    return;
+  }
+
+  reply("Main abhi is sawal ka intelligent AI answer nahi de sakta. Iske liye baad mein AI service connect kar sakte hain.");
+}
+
+function startListening() {
+  const SpeechRecognition = window.SpeechRecognition ||
+                            window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    reply("Voice recognition is browser mein supported nahi hai. Latest Chrome ya Edge try karo.");
+    return;
+  }
+  if (listening) return;
+
+  recognition = new SpeechRecognition();
+  recognition.lang = $("language").value;
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  listening = true;
+  mic.classList.add("listening");
+  statusEl.textContent = "● Listening...";
+  message.textContent = "Bolo, main sun raha hoon.";
+
+  recognition.onresult = event => {
+    const result = event.results[event.results.length - 1];
+    if (result.isFinal) runCommand(result[0].transcript);
+  };
+
+  recognition.onerror = event => {
+    console.log("Speech recognition:", event.error);
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      stopListening();
+      reply("Microphone permission allow karo, phir dobara try karo.");
+    } else if (event.error === "network") {
+      message.textContent = "Voice recognition ke liye internet check karo.";
+    }
+  };
+
+  recognition.onend = () => {
+    if (listening) {
+      try { recognition.start(); } catch (e) {}
+    } else {
+      statusEl.textContent = "● Ready";
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    listening = false;
+    mic.classList.remove("listening");
+    statusEl.textContent = "● Ready";
+    reply("Microphone start nahi hua. Dobara click karke dekho.");
+  }
+}
+
+function stopListening() {
+  listening = false;
+  mic.classList.remove("listening");
+  statusEl.textContent = "● Ready";
+  if (recognition) {
+    recognition.onend = null;
+    recognition.stop();
+    recognition = null;
+  }
+}
+
+mic.addEventListener("click", () => {
+  if (listening) {
+    stopListening();
+    message.textContent = "Microphone band hai.";
+  } else {
+    startListening();
+  }
+});
+
+$("commandForm").addEventListener("submit", event => {
+  event.preventDefault();
+  runCommand($("commandInput").value);
+  $("commandInput").value = "";
+});
+
+document.querySelectorAll("[data-action]").forEach(button => {
+  button.addEventListener("click", () => {
+    const actions = {
+      google: "Google kholo",
+      youtube: "YouTube kholo",
+      notes: "Notes kholo",
+      calculator: "Calculator kholo",
+      gmail: "Gmail kholo",
+      maps: "Maps kholo"
+    };
+    runCommand(actions[button.dataset.action]);
+  });
+});
+
+$("closeNotes").addEventListener("click", () => {
+  notesPanel.hidden = true;
+});
+
+$("downloadNotes").addEventListener("click", () => {
+  const blob = new Blob([$("notes").value], {
+    type: "text/plain;charset=utf-8"
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "JARVIS-notes.txt";
+  link.click();
+  URL.revokeObjectURL(url);
+});
+
+$("language").addEventListener("change", () => {
+  if (listening) {
+    stopListening();
+    startListening();
+  }
+});
+</script>
+</body>
+</html>
